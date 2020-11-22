@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import knex from '../database/connection';
 
+interface POINT {
+    point_id: Number
+}
+
 class PointsController {
 
     async index(request: Request, response: Response) {
@@ -50,49 +54,55 @@ class PointsController {
     }
 
     async store(request: Request, response: Response) {
-        const { 
-            name,
-            email,
-            whatsapp,
-            latitude,
-            longitude,
-            city,
-            uf,
-            items
-        } = request.body;
-    
-        const point = {
-            name,
-            email,
-            whatsapp,
-            latitude,
-            longitude,
-            city,
-            uf,
-            image: request.file.filename
-        }
-
-        const trx = await knex.transaction();
-        const [point_id] = await trx('points').insert(point);
-    
-        const pointItems = items
-            .split(',')
-            .map((item: string) => Number(item.trim()))
-            .map((item_id: Number) => {
-            return {
-                item_id,
-                point_id
+        try {
+            const { 
+                name,
+                email,
+                whatsapp,
+                latitude,
+                longitude,
+                city,
+                uf,
+                items
+            } = request.body;
+        
+            const point = {
+                name,
+                email,
+                whatsapp,
+                latitude,
+                longitude,
+                city,
+                uf,
+                image: request.file.filename
             }
-        })
     
-        await trx('point_items').insert(pointItems);
-
-        await trx.commit();
+            const trx = await knex.transaction();
+            const result = <POINT> await trx('points').insert(point);
+            console.log(result);
+            const point_id = result.point_id;
+        
+            const pointItems = items
+                .split(',')
+                .map((item: string) => Number(item.trim()))
+                .map((item_id: Number) => {
+                return {
+                    item_id,
+                    point_id
+                }
+            })
+        
+            await trx('point_items').insert(pointItems);
     
-        return response.json({ 
-            id: point_id,
-            ...point
-         });
+            await trx.commit();
+        
+            return response.json({ 
+                id: point_id,
+                ...point
+            });
+        } catch(err) {
+            return response.status(500).json({ message: err.message });
+        }
     }
 }
 
