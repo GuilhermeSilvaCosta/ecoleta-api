@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import knex from '../database/connection';
 
 interface POINT {
-    point_id: Number
+    id: Number
 }
 
 class PointsController {
@@ -78,9 +78,8 @@ class PointsController {
             }
     
             const trx = await knex.transaction();
-            const result = <POINT> await trx('points').insert(point);
-            console.log(result);
-            const point_id = result.point_id;
+            const [result] = await trx('points').insert(point).returning('*');
+            const point_id = result.id;
         
             const pointItems = items
                 .split(',')
@@ -97,7 +96,7 @@ class PointsController {
             await trx.commit();
         
             return response.json({ 
-                id: point_id,
+                id: result.id,
                 ...point
             });
         } catch(err) {
