@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Storage } from '@google-cloud/storage';
 import knex from '../database/connection';
 
 interface POINT {
@@ -55,6 +56,8 @@ class PointsController {
 
     async store(request: Request, response: Response) {
         try {
+            const storage = new Storage();
+
             const { 
                 name,
                 email,
@@ -76,6 +79,12 @@ class PointsController {
                 uf,
                 image: request.file.filename
             }
+
+            await storage.bucket('guilherme-portfolio').upload(request.file.path, {
+                destination: `nlw1/${request.file.filename}`,
+                // Support for HTTP requests made with `Accept-Encoding: gzip`
+                gzip: true,
+              });
     
             const trx = await knex.transaction();
             const [result] = await trx('points').insert(point).returning('*');

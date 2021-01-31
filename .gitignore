@@ -3,3 +3,4 @@ uploads/*.jpg
 build
 .env
 *.sqlite
+gcpStorage.json
