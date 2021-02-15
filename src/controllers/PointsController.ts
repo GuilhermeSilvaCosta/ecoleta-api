@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
-import { Storage } from '@google-cloud/storage';
 import knex from '../database/connection';
+import { Storage } from '@google-cloud/storage';
+import fs from 'fs';
 
 interface POINT {
     id: Number
@@ -44,7 +45,7 @@ class PointsController {
 
         const serializePoint = {
             ...point,
-            image_url: `${process.env.IMAGE_PATH}/${point.image}`
+            image_url: `${process.env.BUCKET_PATH}/${point.image}`
         }
 
         const items = await knex('items')
@@ -68,6 +69,14 @@ class PointsController {
                 uf,
                 items
             } = request.body;
+
+            const [, { name: cloudPath }] = await storage.bucket('guilherme-portfolio').upload(request.file.path, {
+                destination: `nlw1/${request.file.filename}`,
+                // Support for HTTP requests made with `Accept-Encoding: gzip`
+                gzip: true,
+            });
+            await storage.bucket('guilherme-portfolio').file(cloudPath).makePublic();
+            fs.unlinkSync(request.file.path);
         
             const point = {
                 name,
@@ -79,12 +88,6 @@ class PointsController {
                 uf,
                 image: request.file.filename
             }
-
-            await storage.bucket('guilherme-portfolio').upload(request.file.path, {
-                destination: `nlw1/${request.file.filename}`,
-                // Support for HTTP requests made with `Accept-Encoding: gzip`
-                gzip: true,
-              });
     
             const trx = await knex.transaction();
             const [result] = await trx('points').insert(point).returning('*');
